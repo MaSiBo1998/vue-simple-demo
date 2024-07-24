@@ -11,7 +11,7 @@ export function getDepartmentSelect(data) {
 }
 export function add(data) {
   return request({
-    url: '/add/user',
+    url: '/addAccount',
     method: 'post',
     data
   })
@@ -39,14 +39,14 @@ export function edit(data) {
 
 export function rePassw(data) {
   return request({
-    url: '/reset/password',
+    url: '/updateUserPwd',
     method: 'post',
     data
   })
 }
 export function changeStatus(data) {
   return request({
-    url: '/reset/password',
+    url: '/updateStatus',
     method: 'post',
     data
   })

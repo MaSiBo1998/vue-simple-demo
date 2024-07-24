@@ -269,7 +269,7 @@ function CRUD(options) {
       crud.crudMethod.add(crud.form).then((res) => {
         crud.status.add = CRUD.STATUS.NORMAL
         crud.resetForm()
-        crud.addSuccessNotify(res.data.msg)
+        crud.addSuccessNotify(res.data.data)
         callVmHook(crud, CRUD.HOOK.afterSubmit)
         crud.toQuery()
       }).catch(() => {

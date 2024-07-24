@@ -38,16 +38,26 @@
     <!-- 批量导入弹窗 -->
     <el-dialog append-to-body :close-on-click-modal="false" @close="colseUpload" :visible.sync="showUpload" title="上传文件"
       width="620px">
-      <el-row type="flex" align="middle" style="margin-bottom: 20px">
+      <el-row type="flex" align="middle">
         <el-col :span="6">
-          <el-select v-model="uploadParam.typeId" @change="crud.toQuery()" clearable size="small" filterable
-            placeholder="请选择模板" class="filter-item" style="width: 100%">
+          1. 请先选择模板
+        </el-col>
+        <el-col :span="6">
+          <el-select v-model="uploadParam.typeId" clearable size="small" filterable placeholder="请选择模板"
+            class="filter-item" style="width: 220px" @change="selectChange">
             <el-option :value="item.id" v-for="item in uploadTypeList" :label="item.typeName" :key="item.id" />
           </el-select>
         </el-col>
       </el-row>
-
-      <el-row type="flex" align="middle">
+      <el-row type="flex" align="middle" v-if="uploadParam.typeId">
+        <ul style="padding-inline-start:20px;margin: 0;color: #F56C6C;">
+          <li v-for="item, index in tips" :key="index"> {{ item }}</li>
+        </ul>
+      </el-row>
+      <el-row type="flex" align="middle" style="margin-top:20px">
+        <el-col :span="10">
+          2. 请选择文件（格式仅支持xls,xlsx)
+        </el-col>
         <el-col :span="6">
           <el-upload class="upload-demo" ref="uploadExcel" :action="uploadurl" accept=".xlsx,.xls" multiple :limit="1"
             :headers="{ 'authToken': token }" :auto-upload="false" :data="uploadParam" :before-upload="beforeUploadFile"
@@ -68,8 +78,8 @@
     </el-dialog>
     <div class="table-box">
       <!--表格渲染-->
-      <el-table ref="table" stripe :data="crud.data">
-        <el-table-column prop="fileName" align="center" label="文件名" width="180">
+      <el-table ref="table" border v-loading="crud.loading" max-height="600" stripe lazy :data="crud.data">
+        <el-table-column prop="fileName" align="center" label="文件名">
         </el-table-column>
         <el-table-column prop="typeName" align="center" label="上传表格模板" width="180">
         </el-table-column>
@@ -78,11 +88,11 @@
             {{ scope.row.uploadStatus == 1 ? '已处理' : '未处理' }}
           </template>
         </el-table-column>
-        <el-table-column prop="uploadTime" align="center" label="上传时间" width="180">
+        <el-table-column prop="uploadTime" align="center" label="上传时间" width="220">
         </el-table-column>
         <el-table-column prop="uploadBy" align="center" label="上传用户">
         </el-table-column>
-        <el-table-column prop="finishTime" align="center" label="处理完成时间" width="180">
+        <el-table-column prop="finishTime" align="center" label="处理完成时间" width="220">
         </el-table-column>
         <el-table-column width="200px" align="center" label="操作">
           <template slot-scope="scope">
@@ -150,7 +160,8 @@ export default {
         del: ['admin', 'orderShare:del']
       },
       detailsLoading: false,
-      token: ''
+      token: '',
+      tips: []
     };
   },
   computed: {
@@ -168,6 +179,19 @@ export default {
         console.log(res)
         this.uploadTypeList = res.data.data
       })
+    },
+    selectChange(e) {
+      console.log(e)
+      if (!e) {
+        return
+      }
+      let data
+      this.uploadTypeList.forEach(item => {
+        if (item.id === e) {
+          data = item.typeDesc
+        }
+      })
+      this.tips = data.split('\\n')
     },
     [CRUD.HOOK.beforeRefresh](crud) {
       if (this.query.uploadTime) {
@@ -259,6 +283,7 @@ export default {
     },
     handleRemove(file, fileList) {
       this.form.file = "";
+      this.alreadySelectFile = false;
     },
     submitUpload() {
       let self = this;
@@ -302,14 +327,14 @@ export default {
 
 .table-box {
   margin-top: 20px;
-  padding: 20px;
+  padding: 20px 0;
   background-color: #FFF;
   box-shadow: 5px;
 }
 
 /deep/.el-table th.el-table__cell.is-leaf,
 .el-table td.el-table__cell {
-  border-bottom: 2px solid #23b7e5;
+  border-bottom: 2px solid #67C23A;
 }
 
 
