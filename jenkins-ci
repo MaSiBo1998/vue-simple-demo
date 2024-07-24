@@ -1,0 +1,117 @@
+#!groovy
+
+def defineImgTag() {
+  def NAMESPACE = ""
+  def REG_URL = ""
+  if ("${env.JOB_NAME}".contains("front-end")) {
+    def realJobName = "${env.JOB_NAME}".replaceAll("front-end/", "")
+    NAMESPACE = realJobName.split("-")[0]
+  } else {
+    NAMESPACE = "${env.JOB_NAME}".split("-")[0]
+  }
+  REG_URL = "registry-vpc.cn-hangzhou.aliyuncs.com"
+  def ROLLTAG = "${params.ROLLTAG}"
+  def PROJECT_NAME = "${env.GIT_URL}".substring("${env.GIT_URL}".lastIndexOf("/") + 1, "${env.GIT_URL}".lastIndexOf(".git"))
+  def PROJECT_NAMESPACE = "${env.GIT_URL}".substring("${env.GIT_URL}".lastIndexOf(":") + 1, "${env.GIT_URL}".lastIndexOf("/"))
+  def IMG_TAG
+  if (ROLLTAG) {
+    IMG_TAG = "${REG_URL}/${PROJECT_NAMESPACE}/${PROJECT_NAME}:$ROLLTAG"
+  } else {
+    def COMMIT_SHORT_SHA = "${env.GIT_COMMIT}".toString().substring(0, 8)
+    def FORMAT_BRANCH = "${env.GIT_BRANCH}".replaceAll("origin/", "").replaceAll("/", "_")
+    IMG_TAG = "${REG_URL}/${PROJECT_NAMESPACE}/${PROJECT_NAME}:${NAMESPACE}_${env.BUILD_NUMBER}_${FORMAT_BRANCH}_${COMMIT_SHORT_SHA}"
+  }
+  return IMG_TAG
+}
+
+def defineProjectName() {
+  def jobName = "${env.JOB_NAME}"
+  if ("${env.JOB_NAME}".contains("front-end")){
+    jobName = "${env.JOB_NAME}".replaceAll("front-end/","")
+  }
+  jobName = jobName.substring(jobName.indexOf("-")+1)
+  return jobName
+}
+
+def getNameSpace() {
+  def NAMESPACE = ""
+  if ("${env.JOB_NAME}".contains("front-end")){
+    def realJobName = "${env.JOB_NAME}".replaceAll("front-end/","")
+    NAMESPACE = realJobName.split("-")[0]
+  }else {
+    NAMESPACE = "${env.JOB_NAME}".split("-")[0]
+  }
+  return NAMESPACE
+}
+
+
+pipeline {
+  environment {
+    CI_PROJECT_NAME = defineProjectName()
+    IMG_TAG = defineImgTag()
+    NAMESPACE = getNameSpace()
+    JVM = "boot2g"
+  }
+
+  agent {
+    docker {
+      image 'registry-vpc.cn-hangzhou.aliyuncs.com/yslibrary/node:13.10.1-alpine'
+      registryUrl 'https://registry-vpc.cn-hangzhou.aliyuncs.com'
+      registryCredentialsId 'yanshu-image'
+      args '-v /home/admin/.npm:/var/jenkins_home/workspace/dev-admin/node_modules -v /var/run/docker.sock:/var/run/docker.sock -v /root/.kube-publish:/root/.kube-publish'
+    }
+  }
+
+  stages {
+    stage("analysis-job") {
+      steps {
+        echo "${env.GIT_BRANCH}"
+      }
+    }
+    stage('build') {
+      steps {
+        script {
+          if (!params.ROLLTAG) {
+            sh "npm install --registry https://registry.npm.taobao.org/"
+            sh "npm run build"
+          }
+        }
+      }
+    }
+    stage('docker-job') {
+      steps {
+        script {
+          if (!params.ROLLTAG) {
+            docker.withRegistry('https://registry-vpc.cn-hangzhou.aliyuncs.com', 'yanshu-image') {
+              def dockerimg = docker.build("$IMG_TAG", "-f Dockerfile .")
+              dockerimg.push()
+            }
+          }
+        }
+      }
+    }
+    stage('deploy-job') {
+      steps {
+        script {
+          sh 'sh gitlab-ci/deploy.sh'
+        }
+      }
+    }
+  }
+  post {
+    success {
+      emailext(
+        subject: "${env.JOB_NAME} - 第${env.BUILD_NUMBER}次构建日志 更新成功",
+        body: '${SCRIPT, template="email-html.template"}',
+        recipientProviders: [requestor(), developers()]
+      )
+    }
+    failure {
+      emailext(
+        subject: "${env.JOB_NAME} - 第${env.BUILD_NUMBER}次构建日志 更新失败",
+        body: '${SCRIPT, template="email-html.template"}',
+        recipientProviders: [requestor(), developers()]
+      )
+    }
+  }
+}
