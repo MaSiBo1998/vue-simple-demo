@@ -57,7 +57,7 @@ export default {
     }
   },
   created() {
-    this.getCookie()
+    Cookies.remove('UserInfo')
   },
   methods: {
     getCookie() {
@@ -81,7 +81,7 @@ export default {
           this.$store.dispatch('Login', user).then((res) => {
             console.log(res)
             this.loading = false
-            // Cookies.set(UserInfo, user, { expires: 7 })
+            Cookies.set('UserInfo', user, { expires: 7 })
             this.$router.push({ path: '/' })
           }).catch((err) => {
             console.log(err)

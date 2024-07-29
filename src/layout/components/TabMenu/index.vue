@@ -42,6 +42,7 @@
 </template>
 
 <script>
+import Cookies from 'js-cookie'
 import store from '@/store'
 import { updatePwd } from '@/api/login'
 import { mapGetters } from 'vuex'
@@ -88,8 +89,7 @@ export default {
 
   },
   created() {
-    this.username = sessionStorage.getItem('USER') ? JSON.parse(sessionStorage.getItem('USER')).username : '未知'
-    console.log(this.user)
+    this.username = Cookies.get('UserInfo') ? JSON.parse(Cookies.get('UserInfo')).username : '未知'
   },
   methods: {
     open() {
@@ -103,8 +103,8 @@ export default {
     },
     logout() {
       this.$store.dispatch('LogOut').then(() => {
-        // location.reload()
-        location.href = '/login'
+        Cookies.remove('UserInfo')
+        location.reload()
       })
     },
     cancel() {
